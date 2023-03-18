@@ -1,50 +1,35 @@
 import sqlalchemy as sa
 import sqlalchemy.orm as sa_orm
-import task1 as models
+from task1 import Publisher, Book, Stock, Sale, Shop
 
 def get_publisher_sales(engine):
   input_str = input('Введите id или имя издателя:\n')
 
   Session = sa_orm.sessionmaker(bind=engine)
   with Session() as session:
-    query = session.query(models.Sale)\
-                   .join(models.Stock)\
-                   .join(models.Shop)\
-                   .join(models.Book)\
-                   .join(models.Publisher)
+    query =session.query(
+      Book.title, Shop.name, Sale.price, Sale.count, Sale.date_sale
+    ).join(Publisher).join(Stock).join(Shop).join(Sale)
     if input_str.isdigit():
       publisher_id = int(input_str)
-      query = query.filter(models.Publisher.id == publisher_id)
+      query = query.filter(Publisher.id == publisher_id)
     else:
       publisher_name = input_str
-      query = query.filter(models.Publisher.name == publisher_name)
+      query = query.filter(Publisher.name == publisher_name)
 
     query_result = query.all()
   
-    max_len_book_name = 0
-    max_len_shop_name = 0
-    max_len_sale_price = 0
-    for sale in query_result:
-      book_name = sale.stock.book.title
-      shop_name = sale.stock.shop.name
-      sale_price_str = str(sale.price)
-      sale_date = sale.date_sale
-      if len(book_name) > max_len_book_name:
-        max_len_book_name = len(book_name)
-      if len(shop_name) > max_len_shop_name:
-        max_len_shop_name = len(shop_name)
-      if len(sale_price_str) > max_len_sale_price:
-        max_len_sale_price = len(sale_price_str)
+    max_len_book = Book.title.type.length
+    max_len_shop = Shop.name.type.length
+    max_len_amt = 10
 
-    for sale in query_result:
-      book_name = sale.stock.book.title
-      shop_name = sale.stock.shop.name
-      sale_price_str = str(sale.price)
-      sale_date = sale.date_sale
-      print(f'{book_name.ljust(max_len_book_name)} | '
-            f'{shop_name.ljust(max_len_shop_name)} | '
-            f'{sale_price_str.ljust(max_len_sale_price)} | '
-            f'{sale_date}')
+    for book, shop, price, count, date in query_result:
+      amt_str = str(price * count)
+      date_str = str(date)[:19]
+      print(f'{book.ljust(max_len_book)} | '
+            f'{shop.ljust(max_len_shop)} | '
+            f'{amt_str.ljust(max_len_amt)} | '
+            f'{date_str}')
 
 def main():
   db_type = 'postgresql'
